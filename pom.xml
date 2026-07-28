@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.anakin</groupId>
+  <artifactId>appian-anakin</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>appian-anakin</name>
+  <description>
+    Appian Connected System Plug-in for the Anakin API (https://anakin.io) --
+    URL scraping, AI-powered search, and multi-stage agentic research.
+  </description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Bytecode target 11: the minimum JDK Appian's on-prem plug-in runtime
+         has supported across recent major versions. java.net.http.HttpClient
+         (used here instead of the Apache HttpClient the official Appian CSP
+         examples use) has been available since JDK 11, so this stays
+         compatible without pulling in an extra HTTP dependency. -->
+    <maven.compiler.release>11</maven.compiler.release>
+
+    <connected-systems-core.version>1.10.0</connected-systems-core.version>
+    <connected-systems-client.version>1.4.0</connected-systems-client.version>
+    <jackson.version>2.17.2</jackson.version>
+    <slf4j.version>1.7.36</slf4j.version>
+    <junit.version>4.13.2</junit.version>
+  </properties>
+
+  <dependencies>
+    <!-- Appian Integration SDK. "provided" scope == Gradle's `compileOnly` in
+         the official examples: the Appian server supplies this at runtime,
+         so it must NOT be bundled into the plug-in jar. -->
+    <dependency>
+      <groupId>com.appian</groupId>
+      <artifactId>connected-systems-core</artifactId>
+      <version>${connected-systems-core.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Client-side support classes (property builders, diagnostics, etc).
+         "compile" scope == Gradle's `implementation`: this one DOES need to
+         ship inside the plug-in jar, same as the official examples. -->
+    <dependency>
+      <groupId>com.appian</groupId>
+      <artifactId>connected-systems-client</artifactId>
+      <version>${connected-systems-client.version}</version>
+    </dependency>
+
+    <!-- JSON (de)serialization for the Anakin API's request/response bodies. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+
+    <!-- Logging facade. Provided scope: Appian's server ships an SLF4J
+         binding already: shipping a second one risks classpath conflicts. -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Test-only. Note: connected-systems-core does NOT need a second,
+         test-scoped declaration here. Maven's "provided" scope (used
+         above) is already visible on both the compile AND test classpaths.
+         A duplicate test-scope declaration previously caused Maven's
+         dependency mediation to collapse the two into a single test-only
+         entry, silently dropping the Appian SDK off the main compile
+         classpath (caught via `mvn dependency:tree`, which flagged the
+         duplicate declaration as a build warning). -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>${project.artifactId}-${project.version}</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+
+      <!--
+        Appian plug-ins are deployed to the Admin Console as a single JAR
+        (confirmed against Appian's real Gradle example builds and Appian
+        Community/docs references to uploading a plug-in ".jar file",
+        there is no zip step. The official build.gradle in every
+        appian/integration-sdk-examples CSP sample nests its runtime
+        dependencies under META-INF/lib inside that same jar and sets
+        Spring-Context: *;publish-context:=false on the manifest so the
+        OSGi container running inside Appian does not try to publish this
+        plug-in's beans as Spring services. maven-assembly-plugin with the
+        descriptor in src/assembly/plugin.xml reproduces that jar layout
+        (Maven has no built in equivalent of Gradle's jar task nesting
+        configurations.runtimeClasspath under META-INF/lib).
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.7.1</version>
+        <configuration>
+          <descriptors>
+            <descriptor>src/assembly/plugin.xml</descriptor>
+          </descriptors>
+          <archive>
+            <manifestEntries>
+              <Spring-Context>*;publish-context:=false</Spring-Context>
+            </manifestEntries>
+          </archive>
+          <appendAssemblyId>false</appendAssemblyId>
+        </configuration>
+        <executions>
+          <execution>
+            <id>build-plugin-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

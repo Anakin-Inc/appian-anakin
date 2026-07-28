@@ -1,0 +1,24 @@
+<appian-plugin name="Anakin Connected System" key="io.anakin.appian">
+
+  <plugin-info>
+    <description>Anakin (https://anakin.io) -- URL scraping, AI-powered search, and multi-stage
+      agentic research over hundreds of popular sites, via api.anakin.io/v1.</description>
+    <vendor name="Anakin" url="https://anakin.io"/>
+    <version>1.0.0.0</version>
+    <application-version min="23.1.0.0"/>
+  </plugin-info>
+
+  <connected-system-template key="AnakinConnectedSystemTemplate" name="AnakinConnectedSystemTemplate"
+                              class="io.anakin.appian.templates.AnakinConnectedSystemTemplate">
+
+    <integration-template key="AnakinUrlScraperIntegrationTemplate" name="AnakinUrlScraperIntegrationTemplate"
+                           class="io.anakin.appian.templates.UrlScraperIntegrationTemplate"/>
+
+    <integration-template key="AnakinSearchIntegrationTemplate" name="AnakinSearchIntegrationTemplate"
+                           class="io.anakin.appian.templates.SearchIntegrationTemplate"/>
+
+    <integration-template key="AnakinAgenticSearchIntegrationTemplate" name="AnakinAgenticSearchIntegrationTemplate"
+                           class="io.anakin.appian.templates.AgenticSearchIntegrationTemplate"/>
+
+  </connected-system-template>
+</appian-plugin>

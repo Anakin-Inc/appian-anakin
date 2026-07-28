@@ -1,0 +1,32 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 http://maven.apache.org/xsd/assembly-2.2.0.xsd">
+  <id>plugin</id>
+  <formats>
+    <format>jar</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+
+  <!-- Compiled classes + appian-plugin.xml + resource bundle go at the jar root,
+       same as a normal Maven/Gradle jar. -->
+  <fileSets>
+    <fileSet>
+      <directory>${project.build.outputDirectory}</directory>
+      <outputDirectory>/</outputDirectory>
+    </fileSet>
+  </fileSets>
+
+  <!-- Runtime-scope dependencies (connected-systems-client, jackson-databind)
+       are nested under META-INF/lib, matching the official Appian CSP
+       example build.gradle's jar task, which nests configurations.
+       runtimeClasspath under META-INF/lib. This is Appian's own plug-in
+       packaging convention, not a generic Maven fat-jar shade. -->
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>META-INF/lib</outputDirectory>
+      <useProjectArtifact>false</useProjectArtifact>
+      <scope>runtime</scope>
+      <unpack>false</unpack>
+    </dependencySet>
+  </dependencySets>
+</assembly>
