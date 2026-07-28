@@ -2,11 +2,15 @@ package io.anakin.appian.templates;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,6 +93,68 @@ final class AnakinApiClient {
   }
 
   /**
+   * POSTs to {@code BASE_URL + path} with no request body -- for endpoints
+   * like the Wire monitor control actions ({@code POST /monitors/:id/pause})
+   * that take no parameters.
+   */
+  Map<String, Object> post(String path) throws AnakinApiException {
+    return post(BASE_URL, path);
+  }
+
+  /** Overload taking an explicit base URL so tests can point at a local mock server. */
+  Map<String, Object> post(String baseUrl, String path) throws AnakinApiException {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(baseUrl + path))
+        .timeout(REQUEST_TIMEOUT)
+        .header("Content-Type", "application/json")
+        .header("X-API-Key", apiKey)
+        .POST(HttpRequest.BodyPublishers.noBody())
+        .build();
+    return send(request);
+  }
+
+  /** DELETEs {@code BASE_URL + path}; returns the parsed JSON response. */
+  Map<String, Object> delete(String path) throws AnakinApiException {
+    return delete(BASE_URL, path);
+  }
+
+  /** Overload taking an explicit base URL so tests can point at a local mock server. */
+  Map<String, Object> delete(String baseUrl, String path) throws AnakinApiException {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(baseUrl + path))
+        .timeout(REQUEST_TIMEOUT)
+        .header("X-API-Key", apiKey)
+        .DELETE()
+        .build();
+    return send(request);
+  }
+
+  /**
+   * Appends a query string built from {@code params} to {@code path},
+   * skipping any entry whose value is {@code null} or blank and
+   * URL-encoding both keys and values. Mirrors the {@code withQuery} helper
+   * in anakin-mcp's TypeScript client ({@code src/client.ts}), which this
+   * plug-in's GET-with-query-params endpoints (wire_discover, wire_identities,
+   * session_list) are read from.
+   */
+  static String withQuery(String path, Map<String, String> params) {
+    StringBuilder result = new StringBuilder(path);
+    boolean first = true;
+    for (Map.Entry<String, String> entry : params.entrySet()) {
+      String value = entry.getValue();
+      if (value == null || value.isBlank()) {
+        continue;
+      }
+      result.append(first ? '?' : '&');
+      result.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
+      result.append('=');
+      result.append(URLEncoder.encode(value, StandardCharsets.UTF_8));
+      first = false;
+    }
+    return result.toString();
+  }
+
+  /**
    * Polls {@code GET path} (an Anakin job-status endpoint) until the job's
    * {@code status} field reaches a terminal value ({@code "completed"} or
    * {@code "failed"}), or until {@link #POLL_TIMEOUT} elapses.
@@ -105,12 +171,54 @@ final class AnakinApiClient {
 
   /** Overload taking an explicit base URL so tests can poll a local mock server. */
   Map<String, Object> pollUntilTerminal(String baseUrl, String path) throws AnakinApiException {
+    return pollUntil(baseUrl, path, status -> "completed".equals(status) || "failed".equals(status));
+  }
+
+  /**
+   * Polls {@code GET path} until {@code status} is anything other than
+   * {@code pendingStatus}, or until {@link #POLL_TIMEOUT} elapses.
+   *
+   * <p>Used by AI Visibility search, whose {@code GET /ai-visibility/search/:id}
+   * job can land on a {@code "failed"} status for one call while still
+   * carrying usable per-source results for others -- the API's own
+   * "still working" signal is the literal {@code "running"} status, not the
+   * absence of {@code "failed"} (see anakin-mcp's {@code aiVisibilitySearch},
+   * which returns rather than throws on a failed job for this reason).
+   */
+  Map<String, Object> pollUntilStatusNot(String path, String pendingStatus) throws AnakinApiException {
+    return pollUntilStatusNot(BASE_URL, path, pendingStatus);
+  }
+
+  /** Overload taking an explicit base URL so tests can poll a local mock server. */
+  Map<String, Object> pollUntilStatusNot(String baseUrl, String path, String pendingStatus) throws AnakinApiException {
+    return pollUntil(baseUrl, path, status -> !pendingStatus.equals(status));
+  }
+
+  /**
+   * Polls {@code GET path} until {@code status} is one of {@code terminalStatuses},
+   * or until {@link #POLL_TIMEOUT} elapses.
+   *
+   * <p>Used by browser_task ({@code GET /ai/jobs/:workflowId}), whose jobs
+   * reach one of three terminal states ({@code completed}, {@code failed},
+   * {@code timed_out}) rather than the usual two.
+   */
+  Map<String, Object> pollUntilStatusIn(String path, Set<String> terminalStatuses) throws AnakinApiException {
+    return pollUntilStatusIn(BASE_URL, path, terminalStatuses);
+  }
+
+  /** Overload taking an explicit base URL so tests can poll a local mock server. */
+  Map<String, Object> pollUntilStatusIn(String baseUrl, String path, Set<String> terminalStatuses) throws AnakinApiException {
+    return pollUntil(baseUrl, path, terminalStatuses::contains);
+  }
+
+  private Map<String, Object> pollUntil(String baseUrl, String path, Predicate<Object> isTerminal)
+      throws AnakinApiException {
     long deadline = System.currentTimeMillis() + POLL_TIMEOUT.toMillis();
     Object lastStatus = null;
     while (true) {
       Map<String, Object> result = get(baseUrl, path);
       lastStatus = result.get("status");
-      if ("completed".equals(lastStatus) || "failed".equals(lastStatus)) {
+      if (isTerminal.test(lastStatus)) {
         return result;
       }
       if (System.currentTimeMillis() >= deadline) {
