@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -171,6 +173,94 @@ public class AnakinApiClientTest {
     AnakinApiClient client = new AnakinApiClient("test-key", HttpClient.newHttpClient());
     Map<String, Object> response = client.get(baseUrl, "/search");
     assertEquals("x", response.get("id"));
+  }
+
+  @Test
+  public void postWithNoBodySendsRequestAndApiKeyHeader() throws Exception {
+    server.createContext("/monitors/mon-1/pause", exchange -> {
+      assertEquals("POST", exchange.getRequestMethod());
+      assertEquals("test-key", exchange.getRequestHeaders().getFirst("X-API-Key"));
+      writeJson(exchange, 200, "{\"isActive\":false}");
+    });
+    server.start();
+
+    AnakinApiClient client = new AnakinApiClient("test-key");
+    Map<String, Object> response = client.post(baseUrl, "/monitors/mon-1/pause");
+
+    assertEquals(Boolean.FALSE, response.get("isActive"));
+  }
+
+  @Test
+  public void deleteSendsRequestAndApiKeyHeader() throws Exception {
+    server.createContext("/sessions/sess-1", exchange -> {
+      assertEquals("DELETE", exchange.getRequestMethod());
+      assertEquals("test-key", exchange.getRequestHeaders().getFirst("X-API-Key"));
+      writeJson(exchange, 200, "{\"deleted\":true}");
+    });
+    server.start();
+
+    AnakinApiClient client = new AnakinApiClient("test-key");
+    Map<String, Object> response = client.delete(baseUrl, "/sessions/sess-1");
+
+    assertEquals(Boolean.TRUE, response.get("deleted"));
+  }
+
+  @Test
+  public void withQueryBuildsEncodedQueryStringSkippingBlankValues() {
+    Map<String, String> params = new LinkedHashMap<>();
+    params.put("q", "top phones on walmart");
+    params.put("limit", "5");
+    params.put("domain", null);
+    params.put("country", "");
+
+    String result = AnakinApiClient.withQuery("/wire/resolve", params);
+
+    assertEquals("/wire/resolve?q=top+phones+on+walmart&limit=5", result);
+  }
+
+  @Test
+  public void withQueryReturnsBarePathWhenAllParamsBlank() {
+    Map<String, String> params = new LinkedHashMap<>();
+    params.put("domain", null);
+
+    assertEquals("/sessions", AnakinApiClient.withQuery("/sessions", params));
+  }
+
+  @Test
+  public void pollUntilStatusNotStopsAsSoonAsStatusLeavesPending() throws Exception {
+    AtomicInteger callCount = new AtomicInteger(0);
+    server.createContext("/ai-visibility/search/search-1", exchange -> {
+      int call = callCount.incrementAndGet();
+      // Mirrors the real API: a "failed" search still returns usable data and is NOT
+      // "running", so pollUntilStatusNot must treat it as terminal just like "completed".
+      String status = call < 2 ? "running" : "failed";
+      writeJson(exchange, 200, "{\"status\":\"" + status + "\",\"results\":[]}");
+    });
+    server.start();
+
+    AnakinApiClient client = new AnakinApiClient("test-key");
+    Map<String, Object> result = client.pollUntilStatusNot(baseUrl, "/ai-visibility/search/search-1", "running");
+
+    assertEquals("failed", result.get("status"));
+    assertEquals(2, callCount.get());
+  }
+
+  @Test
+  public void pollUntilStatusInStopsOnAnyConfiguredTerminalStatus() throws Exception {
+    AtomicInteger callCount = new AtomicInteger(0);
+    server.createContext("/ai/jobs/wf-1", exchange -> {
+      int call = callCount.incrementAndGet();
+      String status = call < 2 ? "running" : "timed_out";
+      writeJson(exchange, 200, "{\"status\":\"" + status + "\"}");
+    });
+    server.start();
+
+    AnakinApiClient client = new AnakinApiClient("test-key");
+    Map<String, Object> result =
+        client.pollUntilStatusIn(baseUrl, "/ai/jobs/wf-1", Set.of("completed", "failed", "timed_out"));
+
+    assertEquals("timed_out", result.get("status"));
+    assertEquals(2, callCount.get());
   }
 
   private static void writeJson(HttpExchange exchange, int status, String json) throws IOException {

@@ -1,8 +1,9 @@
 <appian-plugin name="Anakin Connected System" key="io.anakin.appian">
 
   <plugin-info>
-    <description>Anakin (https://anakin.io) -- URL scraping, AI-powered search, and multi-stage
-      agentic research over hundreds of popular sites, via api.anakin.io/v1.</description>
+    <description>Anakin (https://anakin.io) -- web scraping, site mapping/crawling, AI-powered
+      search and agentic research, the Wire pre-built action catalog, website change monitoring,
+      AI-visibility search, browser sessions, and AI browser automation, via api.anakin.io/v1.</description>
     <vendor name="Anakin" url="https://anakin.io"/>
     <version>1.0.0.0</version>
     <application-version min="23.1.0.0"/>
@@ -11,14 +12,75 @@
   <connected-system-template key="AnakinConnectedSystemTemplate" name="AnakinConnectedSystemTemplate"
                               class="io.anakin.appian.templates.AnakinConnectedSystemTemplate">
 
+    <!-- Scraping / crawling -->
     <integration-template key="AnakinUrlScraperIntegrationTemplate" name="AnakinUrlScraperIntegrationTemplate"
                            class="io.anakin.appian.templates.UrlScraperIntegrationTemplate"/>
 
+    <integration-template key="AnakinMapIntegrationTemplate" name="AnakinMapIntegrationTemplate"
+                           class="io.anakin.appian.templates.MapIntegrationTemplate"/>
+
+    <integration-template key="AnakinCrawlIntegrationTemplate" name="AnakinCrawlIntegrationTemplate"
+                           class="io.anakin.appian.templates.CrawlIntegrationTemplate"/>
+
+    <!-- Search / agentic research -->
     <integration-template key="AnakinSearchIntegrationTemplate" name="AnakinSearchIntegrationTemplate"
                            class="io.anakin.appian.templates.SearchIntegrationTemplate"/>
 
     <integration-template key="AnakinAgenticSearchIntegrationTemplate" name="AnakinAgenticSearchIntegrationTemplate"
                            class="io.anakin.appian.templates.AgenticSearchIntegrationTemplate"/>
+
+    <!-- Wire: pre-built automation actions across hundreds of sites -->
+    <integration-template key="AnakinWireDiscoverIntegrationTemplate" name="AnakinWireDiscoverIntegrationTemplate"
+                           class="io.anakin.appian.templates.WireDiscoverIntegrationTemplate"/>
+
+    <integration-template key="AnakinWireCatalogIntegrationTemplate" name="AnakinWireCatalogIntegrationTemplate"
+                           class="io.anakin.appian.templates.WireCatalogIntegrationTemplate"/>
+
+    <integration-template key="AnakinWireReadActionIntegrationTemplate" name="AnakinWireReadActionIntegrationTemplate"
+                           class="io.anakin.appian.templates.WireReadActionIntegrationTemplate"/>
+
+    <integration-template key="AnakinWireWriteActionIntegrationTemplate" name="AnakinWireWriteActionIntegrationTemplate"
+                           class="io.anakin.appian.templates.WireWriteActionIntegrationTemplate"/>
+
+    <integration-template key="AnakinWireIdentitiesIntegrationTemplate" name="AnakinWireIdentitiesIntegrationTemplate"
+                           class="io.anakin.appian.templates.WireIdentitiesIntegrationTemplate"/>
+
+    <integration-template key="AnakinWireLoginIntegrationTemplate" name="AnakinWireLoginIntegrationTemplate"
+                           class="io.anakin.appian.templates.WireLoginIntegrationTemplate"/>
+
+    <integration-template key="AnakinWireBuildIntegrationTemplate" name="AnakinWireBuildIntegrationTemplate"
+                           class="io.anakin.appian.templates.WireBuildIntegrationTemplate"/>
+
+    <!-- Website monitoring -->
+    <integration-template key="AnakinMonitorCreateIntegrationTemplate" name="AnakinMonitorCreateIntegrationTemplate"
+                           class="io.anakin.appian.templates.MonitorCreateIntegrationTemplate"/>
+
+    <integration-template key="AnakinMonitorListIntegrationTemplate" name="AnakinMonitorListIntegrationTemplate"
+                           class="io.anakin.appian.templates.MonitorListIntegrationTemplate"/>
+
+    <integration-template key="AnakinMonitorChangesIntegrationTemplate" name="AnakinMonitorChangesIntegrationTemplate"
+                           class="io.anakin.appian.templates.MonitorChangesIntegrationTemplate"/>
+
+    <integration-template key="AnakinMonitorControlIntegrationTemplate" name="AnakinMonitorControlIntegrationTemplate"
+                           class="io.anakin.appian.templates.MonitorControlIntegrationTemplate"/>
+
+    <!-- AI visibility -->
+    <integration-template key="AnakinAiVisibilitySearchIntegrationTemplate" name="AnakinAiVisibilitySearchIntegrationTemplate"
+                           class="io.anakin.appian.templates.AiVisibilitySearchIntegrationTemplate"/>
+
+    <integration-template key="AnakinAiVisibilitySourcesIntegrationTemplate" name="AnakinAiVisibilitySourcesIntegrationTemplate"
+                           class="io.anakin.appian.templates.AiVisibilitySourcesIntegrationTemplate"/>
+
+    <!-- Browser sessions -->
+    <integration-template key="AnakinSessionListIntegrationTemplate" name="AnakinSessionListIntegrationTemplate"
+                           class="io.anakin.appian.templates.SessionListIntegrationTemplate"/>
+
+    <integration-template key="AnakinSessionDeleteIntegrationTemplate" name="AnakinSessionDeleteIntegrationTemplate"
+                           class="io.anakin.appian.templates.SessionDeleteIntegrationTemplate"/>
+
+    <!-- AI browser automation -->
+    <integration-template key="AnakinBrowserTaskIntegrationTemplate" name="AnakinBrowserTaskIntegrationTemplate"
+                           class="io.anakin.appian.templates.BrowserTaskIntegrationTemplate"/>
 
   </connected-system-template>
 </appian-plugin>
